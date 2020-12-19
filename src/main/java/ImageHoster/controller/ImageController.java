@@ -1,10 +1,14 @@
 package ImageHoster.controller;
 
-import ImageHoster.model.Image;
-import ImageHoster.model.Tag;
-import ImageHoster.model.User;
-import ImageHoster.service.ImageService;
-import ImageHoster.service.TagService;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Date;
+import java.util.List;
+import java.util.StringTokenizer;
+
+import javax.servlet.http.HttpSession;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,10 +17,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import javax.servlet.http.HttpSession;
-import java.io.IOException;
-import java.util.*;
+import ImageHoster.model.Image;
+import ImageHoster.model.Tag;
+import ImageHoster.model.User;
+import ImageHoster.service.ImageService;
+import ImageHoster.service.TagService;
 
 @Controller
 public class ImageController {
@@ -104,13 +111,24 @@ public class ImageController {
     // This string is then displayed by 'edit.html' file as previous tags of an
     // image
     @RequestMapping(value = "/editImage")
-    public String editImage(@RequestParam("imageId") Integer imageId, Model model) {
+    public String editImage(@RequestParam("imageId") Integer imageId, Model model, HttpSession session,
+            RedirectAttributes redirectAttrs) {
         Image image = imageService.getImage(imageId);
 
-        String tags = convertTagsToString(image.getTags());
-        model.addAttribute("image", image);
-        model.addAttribute("tags", tags);
-        return "images/edit";
+        // Check if user was owner or not, edit is allowed only if user was a owner.
+        if (isTheImageOwner(imageId, session)) {
+            // User is the owner, go ahead with edit
+            String tags = convertTagsToString(image.getTags());
+            model.addAttribute("image", image);
+            model.addAttribute("tags", tags);
+            return "images/edit";
+        } else {
+            // User if not the owner, send error and redirect
+            String imageTitle = imageService.getImage(imageId).getTitle();
+            String error = "Only the owner of the image can edit the image";
+            redirectAttrs.addAttribute("editError", error).addFlashAttribute("editError", error);
+            return "redirect:/images/" + imageId + '/' + imageTitle;
+        }
     }
 
     // This controller method is called when the request pattern is of type
@@ -212,5 +230,22 @@ public class ImageController {
         tagString.append(lastTag.getName());
 
         return tagString.toString();
+    }
+
+    // The method receives the image id of the image & the http Session
+    // Checks if the owner of the image is the current user in the session
+    // Returns boolean
+    private Boolean isTheImageOwner(Integer imageId, HttpSession session) {
+        // Get the image details using image id
+        Image imgData = imageService.getImage(imageId);
+        // Get the image owner id
+        Integer imgOwnerId = imgData.getUser().getId();
+        // Get the currently logged in user first & retrieve his id
+        User currentUser = (User) session.getAttribute("loggeduser");
+        Integer currentUserId = currentUser.getId();
+
+        // Returns if user is the owner of the image
+        return currentUserId == imgOwnerId ? true : false;
+
     }
 }
