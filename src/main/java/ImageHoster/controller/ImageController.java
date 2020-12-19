@@ -34,6 +34,8 @@ public class ImageController {
     @Autowired
     private TagService tagService;
 
+    String error = "Only the owner of the image can delete the image";
+
     // This method displays all the images in the user home page after successful
     // login
     @RequestMapping("images")
@@ -125,7 +127,6 @@ public class ImageController {
         } else {
             // User if not the owner, send error and redirect
             String imageTitle = imageService.getImage(imageId).getTitle();
-            String error = "Only the owner of the image can edit the image";
             redirectAttrs.addAttribute("editError", error).addFlashAttribute("editError", error);
             return "redirect:/images/" + imageId + '/' + imageTitle;
         }
@@ -189,7 +190,6 @@ public class ImageController {
         } else {
             // User is not the owner of the image, send error and redirect
             String imageTitle = imageService.getImage(imageId).getTitle();
-            String error = "Only the owner of the image can delete the image";
             redirectAttrs.addAttribute("deleteError", error).addFlashAttribute("deleteError", error);
             return "redirect:/images/" + imageId + '/' + imageTitle;
         }
