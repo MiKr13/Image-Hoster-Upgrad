@@ -179,9 +179,20 @@ public class ImageController {
     // id of the image to be deleted
     // Looks for a controller method with request mapping of type '/images'
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
-    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId) {
-        imageService.deleteImage(imageId);
-        return "redirect:/images";
+    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, HttpSession session,
+            RedirectAttributes redirectAttrs, Model model) {
+        // Check if user is the owner or not, Delete only if user is the owner.
+        if (isTheImageOwner(imageId, session)) {
+            // User is the owner of the image, go ahead with delete and redirect
+            imageService.deleteImage(imageId);
+            return "redirect:/images";
+        } else {
+            // User is not the owner of the image, send error and redirect
+            String imageTitle = imageService.getImage(imageId).getTitle();
+            String error = "Only the owner of the image can delete the image";
+            redirectAttrs.addAttribute("deleteError", error).addFlashAttribute("deleteError", error);
+            return "redirect:/images/" + imageId + '/' + imageTitle;
+        }
     }
 
     // This method converts the image to Base64 format
